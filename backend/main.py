@@ -5,8 +5,8 @@ from collections import defaultdict
 from fastapi import FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 
-from models import CompletenessReport
-from analyzer import completeness
+from models import CompletenessReport, CodeCoverageReport
+from analyzer import completeness, code_coverage
 
 app = FastAPI(title="FHIR Bundle Quality Analyzer", version="0.1.0")
 
@@ -76,6 +76,14 @@ def analyze_completeness(bundle: dict = Body(...)):
     if bundle.get("resourceType") != "Bundle":
         raise HTTPException(status_code=422, detail="Body is not a FHIR Bundle")
     return completeness.run(bundle)
+
+
+@app.post("/analyze/code-coverage", response_model=CodeCoverageReport)
+def analyze_code_coverage(bundle: dict = Body(...)):
+    if bundle.get("resourceType") != "Bundle":
+        raise HTTPException(status_code=422, detail="Body is not a FHIR Bundle")
+    return code_coverage.run(bundle)
+
 
 
 @app.get("/health")
