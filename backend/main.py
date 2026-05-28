@@ -1,12 +1,19 @@
 import json
 from pathlib import Path
 from collections import defaultdict
+from dotenv import load_dotenv
+import os
+
+from fastapi import FastAPI, HTTPException, Body
 
 from fastapi import FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 
 from models import CompletenessReport, CodeCoverageReport, TemporalConsistencyReport, DuplicateDetectionReport, FullQualityReport
 from analyzer import completeness, code_coverage, temporal, duplicates
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = FastAPI(title="FHIR Bundle Quality Analyzer", version="0.1.0")
 

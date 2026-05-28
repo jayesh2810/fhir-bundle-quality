@@ -1,0 +1,22 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Secrets
+.env
+
+# IDEs
+.vscode/
+.idea/
+
+# Frontend
+node_modules/
+dist/
+.DS_Store
