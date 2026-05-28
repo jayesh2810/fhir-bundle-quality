@@ -5,8 +5,8 @@ from collections import defaultdict
 from fastapi import FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 
-from models import CompletenessReport, CodeCoverageReport, TemporalConsistencyReport
-from analyzer import completeness, code_coverage, temporal
+from models import CompletenessReport, CodeCoverageReport, TemporalConsistencyReport, DuplicateDetectionReport, FullQualityReport
+from analyzer import completeness, code_coverage, temporal, duplicates
 
 app = FastAPI(title="FHIR Bundle Quality Analyzer", version="0.1.0")
 
@@ -90,6 +90,60 @@ def analyze_temporal(bundle: dict = Body(...)):
     if bundle.get("resourceType") != "Bundle":
         raise HTTPException(status_code=422, detail="Body is not a FHIR Bundle")
     return temporal.run(bundle)
+
+
+def _calculate_grade(score: float) -> str:
+    if score >= 0.9: return "A"
+    if score >= 0.8: return "B"
+    if score >= 0.7: return "C"
+    if score >= 0.6: return "D"
+    return "F"
+
+
+@app.post("/analyze", response_model=FullQualityReport)
+def analyze_full(bundle: dict = Body(...)):
+    if bundle.get("resourceType") != "Bundle":
+        raise HTTPException(status_code=422, detail="Body is not a FHIR Bundle")
+    
+    comp = completeness.run(bundle)
+    code = code_coverage.run(bundle)
+    temp = temporal.run(bundle)
+    dups = duplicates.run(bundle)
+    
+    overall = (
+        comp.overall_score * 0.25 +
+        code.overall_score * 0.30 +
+        temp.overall_score * 0.20 +
+        dups.overall_score * 0.25
+    )
+    
+    return FullQualityReport(
+        completeness=comp,
+        code_coverage=code,
+        temporal=temp,
+        duplicates=dups,
+        overall_weighted_score=round(overall, 4),
+        grade=_calculate_grade(overall)
+    )
+
+
+@app.get("/analyze/sample")
+def analyze_sample():
+    if not SAMPLE_BUNDLE_PATH.exists():
+        raise HTTPException(status_code=500, detail="Sample bundle not found")
+    bundle = _load_bundle(SAMPLE_BUNDLE_PATH)
+    return analyze_full(bundle)
+
+
+@app.get("/analyze/degraded")
+def analyze_degraded():
+    degraded_path = SAMPLE_BUNDLE_PATH.parent / "degraded_bundle.json"
+    if not degraded_path.exists():
+        raise HTTPException(status_code=500, detail="Degraded bundle not found")
+    bundle = _load_bundle(degraded_path)
+    return analyze_full(bundle)
+
+
 
 
 

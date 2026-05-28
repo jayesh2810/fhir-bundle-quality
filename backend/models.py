@@ -60,3 +60,34 @@ class TemporalConsistencyReport(BaseModel):
     by_resource_type: list[ResourceTypeTemporal]
 
 
+class DuplicatePair(BaseModel):
+    resource_id_1: str
+    resource_id_2: str
+    similarity: float
+    text_1: str
+    text_2: str
+
+
+class ResourceTypeDuplicates(BaseModel):
+    resource_type: str
+    count: int
+    avg_score: float
+    duplicates: list[DuplicatePair]
+
+
+class DuplicateDetectionReport(BaseModel):
+    overall_score: float
+    by_resource_type: list[ResourceTypeDuplicates]
+
+
+class FullQualityReport(BaseModel):
+    completeness: CompletenessReport
+    code_coverage: CodeCoverageReport
+    temporal: TemporalConsistencyReport
+    duplicates: DuplicateDetectionReport
+    overall_weighted_score: float
+    grade: str
+
+
+
+
