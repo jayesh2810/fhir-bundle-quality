@@ -2,17 +2,13 @@
 import os
 from collections import defaultdict
 import numpy as np
-import google.generativeai as genai
+from google import genai
 from sklearn.metrics.pairwise import cosine_similarity
 from models import DuplicateDetectionReport, ResourceTypeDuplicates, DuplicatePair
 
 # Configure Gemini
 api_key = os.environ.get("GOOGLE_API_KEY")
-if api_key:
-    genai.configure(api_key=api_key)
-else:
-    # In a real app, we'd handle this more gracefully
-    pass
+client = genai.Client(api_key=api_key) if api_key else None
 
 def _extract_text(resource: dict, rtype: str) -> str:
     text_parts = []
@@ -106,13 +102,17 @@ def run(bundle: dict) -> DuplicateDetectionReport:
         ids = [res.get("id", "unknown") for res in resources]
         
         # 2. Batch embed
+        if not client:
+            print("Error: Gemini client not configured")
+            continue
+            
         try:
-            response = genai.embed_content(
-                model="models/text-embedding-004",
-                content=texts,
-                task_type="clustering"
+            response = client.models.embed_content(
+                model="text-embedding-004",
+                contents=texts
             )
-            embeddings = response["embedding"]
+            # New SDK: response.embeddings is a list of embedding objects, each has .values
+            embeddings = [e.values for e in response.embeddings]
         except Exception as e:
             print(f"Embedding error for {rtype}: {e}")
             continue
