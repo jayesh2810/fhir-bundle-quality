@@ -4,6 +4,7 @@
   let report = null;
   let loading = false;
   let customBundle = '';
+  let selectedFile = null;
   let activeTab = 'completeness';
 
   const API_BASE = 'http://localhost:8000';
@@ -16,17 +17,19 @@
     'F': '#f44336'
   };
 
-  async function analyze(endpoint, method = 'GET', body = null) {
+  async function analyze(bundleData) {
     loading = true;
     report = null;
     try {
-      const options = { method };
-      if (body) {
-        options.headers = { 'Content-Type': 'application/json' };
-        options.body = JSON.stringify(body);
+      const response = await fetch(`${API_BASE}/analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bundleData)
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.detail || 'Analysis failed');
       }
-      const response = await fetch(`${API_BASE}${endpoint}`, options);
-      if (!response.ok) throw new Error('Analysis failed');
       report = await response.json();
     } catch (e) {
       alert(e.message);
@@ -35,12 +38,32 @@
     }
   }
 
-  function handleCustomAnalyze() {
-    try {
-      const parsed = JSON.parse(customBundle);
-      analyze('/analyze', 'POST', parsed);
-    } catch (e) {
-      alert('Invalid JSON input');
+  async function handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    selectedFile = file;
+    customBundle = ''; // Clear text area if file is selected
+  }
+
+  async function runAnalysis() {
+    if (selectedFile) {
+      const text = await selectedFile.text();
+      try {
+        const parsed = JSON.parse(text);
+        analyze(parsed);
+      } catch (e) {
+        alert('Uploaded file contains invalid JSON');
+      }
+    } else if (customBundle) {
+      try {
+        const parsed = JSON.parse(customBundle);
+        analyze(parsed);
+      } catch (e) {
+        alert('Invalid JSON input');
+      }
+    } else {
+      alert('Please upload a file or paste JSON content');
     }
   }
 </script>
@@ -51,32 +74,40 @@
   <!-- Section 1: Input Controls -->
   <div class="section">
     <div class="controls">
-      <div class="button-group">
-        <button on:click={() => analyze('/analyze/sample')} disabled={loading}>
-          Analyze Clean Bundle
-        </button>
-        <button on:click={() => analyze('/analyze/degraded')} disabled={loading}>
-          Analyze Degraded Bundle
-        </button>
+      <div class="input-group">
+        <label for="file-upload" style="display: block; margin-bottom: 10px; color: #aaa;">Upload FHIR Bundle (.json)</label>
+        <input 
+          type="file" 
+          id="file-upload" 
+          accept=".json" 
+          on:change={handleFileUpload}
+          disabled={loading}
+        />
       </div>
 
+      <div style="text-align: center; color: #666; margin: 10px 0;">— OR —</div>
+
       <div>
+        <label style="display: block; margin-bottom: 10px; color: #aaa;">Paste Bundle JSON</label>
         <textarea 
           bind:value={customBundle} 
           placeholder="Paste FHIR Bundle JSON here..." 
           disabled={loading}
+          on:input={() => selectedFile = null}
         ></textarea>
-        <div class="button-group" style="margin-top: 10px;">
-          <button on:click={handleCustomAnalyze} disabled={loading}>
-            Analyze Custom Bundle
-          </button>
-        </div>
+      </div>
+
+      <div class="button-group" style="justify-content: center; margin-top: 20px;">
+        <button on:click={runAnalysis} disabled={loading} style="font-size: 18px; padding: 12px 40px;">
+          {loading ? 'Analyzing...' : 'Run Quality Analysis'}
+        </button>
       </div>
     </div>
-    {#if loading}
-      <div class="loader">Analyzing...</div>
-    {/if}
   </div>
+
+  {#if loading}
+    <div class="loader">Processing bundle... please wait...</div>
+  {/if}
 
   {#if report}
     <!-- Section 2: Score Overview -->

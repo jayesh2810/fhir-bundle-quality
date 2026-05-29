@@ -107,11 +107,10 @@ def run(bundle: dict) -> DuplicateDetectionReport:
             continue
             
         try:
-                response = client.models.embed_content(
-                    model="gemini-embedding-2",
-                    contents=texts
-                )
-
+            response = client.models.embed_content(
+                model="gemini-embedding-2",
+                contents=texts
+            )
             # New SDK: response.embeddings is a list of embedding objects, each has .values
             embeddings = [e.values for e in response.embeddings]
         except Exception as e:

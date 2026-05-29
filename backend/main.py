@@ -134,13 +134,6 @@ def analyze_full(bundle: dict = Body(...)):
     )
 
 
-@app.get("/analyze/sample")
-def analyze_sample():
-    if not SAMPLE_BUNDLE_PATH.exists():
-        raise HTTPException(status_code=500, detail="Sample bundle not found")
-    bundle = _load_bundle(SAMPLE_BUNDLE_PATH)
-    return analyze_full(bundle)
-
 
 @app.get("/analyze/degraded")
 def analyze_degraded():
